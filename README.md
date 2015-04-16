@@ -2,12 +2,11 @@ Dyno
 =================
 
 ###Build steps
-git clone https://github.com/ankit3005/Dyno.git;
-
-cd Dyno/Dyno;
-
-mvn clean package -Dcheckstyle.skip=true;
-
+```
+git clone https://github.com/ankit3005/Dyno.git
+cd Dyno/Dyno
+mvn clean package -Dcheckstyle.skip=true
+```
 
 Dyno is a sample of ADSAL application on OpenDaylight to provide list of all active ports for switches. 
 
