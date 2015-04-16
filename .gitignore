@@ -1,0 +1,10 @@
+*/META-INF/*
+MANIFEST.MF
+web.xml
+*.class
+*.classpath
+*.setting*
+*.project*
+*/target/*
+*/target-ide/*
+*.jar
