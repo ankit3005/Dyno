@@ -12,6 +12,8 @@ import java.util.Hashtable;
 import org.apache.felix.dm.Component;
 import org.opendaylight.controller.dyno.IDynoService;
 import org.opendaylight.controller.sal.core.ComponentActivatorAbstractBase;
+import org.opendaylight.controller.sal.packet.IDataPacketService;
+import org.opendaylight.controller.sal.packet.IListenDataPacket;
 import org.opendaylight.controller.switchmanager.IInventoryListener;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
 import org.opendaylight.controller.topologymanager.ITopologyManager;
@@ -84,7 +86,7 @@ public class Activator extends ComponentActivatorAbstractBase {
 
             Dictionary<String, String> props = new Hashtable<String, String>();
             props.put("salListenerName", "Dyno");
-            c.setInterface(new String[] { IDynoService.class.getName(), IInventoryListener.class.getName(), ITopologyManagerAware.class.getName()}, props);
+            c.setInterface(new String[] { IDynoService.class.getName(), IInventoryListener.class.getName(), ITopologyManagerAware.class.getName(), IListenDataPacket.class.getName()}, props);
 
             logger.debug("Registering dependent services");
 
@@ -95,6 +97,11 @@ public class Activator extends ComponentActivatorAbstractBase {
             c.add(createContainerServiceDependency(containerName).setService(
                     ITopologyManager.class).setCallbacks("setTopologyManager",
                     "unsetTopologyManager").setRequired(true));
+            
+            c.add(createContainerServiceDependency(containerName).setService(
+                    IDataPacketService.class).setCallbacks(
+                    "setDataPacketService", "unsetDataPacketService")
+                    .setRequired(true));
         }
     }
 

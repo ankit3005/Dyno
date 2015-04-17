@@ -5,7 +5,9 @@
 
 package org.opendaylight.controller.dyno.internal;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -27,11 +29,22 @@ import org.opendaylight.controller.sal.core.Property;
 import org.opendaylight.controller.sal.core.UpdateType;
 import org.opendaylight.controller.switchmanager.IInventoryListener;
 import org.opendaylight.controller.switchmanager.ISwitchManager;
+import org.opendaylight.controller.switchmanager.Subnet;
 import org.opendaylight.controller.topologymanager.ITopologyManager;
 import org.opendaylight.controller.topologymanager.ITopologyManagerAware;
+import org.opendaylight.controller.sal.packet.Ethernet;
+import org.opendaylight.controller.sal.packet.ICMP;
+import org.opendaylight.controller.sal.packet.IDataPacketService;
+import org.opendaylight.controller.sal.packet.IListenDataPacket;
+import org.opendaylight.controller.sal.packet.IPv4;
+import org.opendaylight.controller.sal.packet.Packet;
+import org.opendaylight.controller.sal.packet.PacketResult;
+import org.opendaylight.controller.sal.packet.RawPacket;
+import org.opendaylight.controller.sal.utils.EtherTypes;
+import org.opendaylight.controller.sal.utils.IPProtocols;
+import org.opendaylight.controller.sal.utils.NetUtils;
 //import org.opendaylight.controller.sal.routing.IListenRoutingUpdates;
 import org.opendaylight.controller.sal.routing.IRouting;
-//import org.opendaylight.controller.sal.topology.IListenTopoUpdates;
 import org.opendaylight.controller.sal.topology.TopoEdgeUpdate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +55,7 @@ import edu.uci.ics.jung.graph.SparseMultigraph;
 import edu.uci.ics.jung.graph.util.EdgeType;
 
 
-public class DynoImpl implements IDynoService, IInventoryListener, ITopologyManagerAware, IRouting {
+public class DynoImpl implements IDynoService, IInventoryListener, ITopologyManagerAware, IRouting, IListenDataPacket {
 
 	private static final Logger logger = LoggerFactory
             .getLogger(DynoImpl.class);
@@ -56,10 +69,13 @@ public class DynoImpl implements IDynoService, IInventoryListener, ITopologyMana
 	/* External services */
 	private ISwitchManager switchManager = null;
     private ITopologyManager topologyManager = null;
-	private HashMap<String, Node> nodeList = null;
+    private IDataPacketService dataPacketService = null;
+    
+    private HashMap<String, Node> nodeList = null;
 	private HashMap<String, String> portList = null;
     private HashMap<Node, Set<Edge>> topology;
-	
+    
+    
 	/* Default Constructor */
 	public DynoImpl() {
 		super();
@@ -91,7 +107,17 @@ public class DynoImpl implements IDynoService, IInventoryListener, ITopologyMana
             this.topologyManager = null;
         }
     }
+    
+    void setDataPacketService(IDataPacketService s) {
+        this.dataPacketService = s;
+    }
 
+    void unsetDataPacketService(IDataPacketService s) {
+        if (this.dataPacketService == s) {
+            this.dataPacketService = null;
+        }
+    }
+    
     /* Function to be called by ODL */
 
     /**
@@ -289,7 +315,7 @@ public class DynoImpl implements IDynoService, IInventoryListener, ITopologyMana
             Graph<Node, Edge> g = new SparseMultigraph();
             this.topologyBWAware.put(bw, g);
             topo = this.topologyBWAware.get(bw);
-            this.sptBWAware.put(bw, new DijkstraShortestPath(g));
+            this.sptBWAware.put(bw, new DijkstraShortestPath<Node, Edge>(g));
             spt = this.sptBWAware.get(bw);
         }
 
@@ -297,7 +323,7 @@ public class DynoImpl implements IDynoService, IInventoryListener, ITopologyMana
             NodeConnector src = edge.getTailNodeConnector();
             NodeConnector dst = edge.getHeadNodeConnector();
             if (spt == null) {
-                spt = new DijkstraShortestPath(topo);
+                spt = new DijkstraShortestPath<Node, Edge>(topo);
                 this.sptBWAware.put(bw, spt);
             }
 
@@ -311,9 +337,6 @@ public class DynoImpl implements IDynoService, IInventoryListener, ITopologyMana
                 if (edgePresentInGraph == false) {
                     try {
                         topo.addEdge(new Edge(src, dst), src.getNode(), dst.getNode(), EdgeType.DIRECTED);
-                        
-                        //TODO remove me!
-                        logger.info("ANKIT>>>> edge added: " + edge);
                     } catch (final ConstructionException e) {
                         logger.error("", e);
                         return edgePresentInGraph;
@@ -539,6 +562,116 @@ public class DynoImpl implements IDynoService, IInventoryListener, ITopologyMana
 		// TODO Auto-generated method stub
 		
 	}
+
+	@Override
+	public PacketResult receiveDataPacket(RawPacket inPkt) {
+		// TODO Auto-generated method stub
+		
+		if (inPkt == null) {
+            return PacketResult.IGNORED;
+        }
+        logger.info("ANKIT>>> Received a frame of size: {}",
+                        inPkt.getPacketData().length);
+        Packet formattedPak = this.dataPacketService.decodeDataPacket(inPkt);
+        logger.info("packet" + formattedPak);
+        
+        //ByteBuffer bb = ByteBuffer.wrap(inPkt.getPacketData());
+        
+        if (formattedPak instanceof Ethernet) {
+            logger.info("Packet is Ethernet");
+            Object nextPak = formattedPak.getPayload();
+            if (nextPak instanceof IPv4) {
+                IPv4 ipPak = (IPv4)nextPak;
+                
+                logger.info("Handled IP packet");
+                int sipAddr = ipPak.getSourceAddress();
+                InetAddress sip = NetUtils.getInetAddress(sipAddr);
+                int dipAddr = ipPak.getDestinationAddress();
+                InetAddress dip = NetUtils.getInetAddress(dipAddr);
+                logger.info("SRC IP: " + sip);
+                
+                logger.info("DST IP:" + dip);
+                
+
+                Object frame = ipPak.getPayload();
+                if (frame instanceof ICMP) {
+                    logger.info("ICMP from instance");
+                }
+                String protocol = IPProtocols.getProtocolName(ipPak.getProtocol());
+                if (protocol == IPProtocols.ICMP.toString()) {
+                    ICMP icmpPak = (ICMP)ipPak.getPayload();
+                    logger.info("ICMP from checking protocol");
+                    handleICMPPacket((Ethernet) formattedPak, icmpPak, inPkt.getIncomingNodeConnector());
+                }
+            }
+        }
+        return PacketResult.IGNORED;
+	}
+
+	
+	
+	
+	protected void handleICMPPacket(Ethernet eHeader, ICMP pkt, NodeConnector p) {
+        IPv4 ipPak = (IPv4)pkt.getParent();
+        InetAddress sourceIP = NetUtils.getInetAddress(ipPak.getSourceAddress());
+        InetAddress targetIP = NetUtils.getInetAddress(ipPak.getDestinationAddress());
+        // Read ICMP type if echo, then create echo reply
+        //if (pkt.getType() == 0x8 && pkt.getCode() == 0x0) {
+        if (true) {
+            logger.info("Received ICMP ECHO REQUEST Packet from NodeConnector: {}",
+                         p);
+            Subnet subnet = null;
+            if (switchManager != null) {
+                subnet = switchManager.getSubnetByNetworkAddress(sourceIP);
+            }
+            byte[] targetMAC = eHeader.getDestinationMACAddress();
+            byte[] sourceMAC = eHeader.getSourceMACAddress();
+
+            if ((targetIP.equals(subnet.getNetworkAddress()))
+                    && Arrays.equals(targetMAC, getControllerMAC())) {
+                sendEchoReply(p, getControllerMAC(), targetIP, sourceMAC, sourceIP);
+            }
+
+            sendEchoReply(p, targetMAC, targetIP, 
+            		sourceMAC, sourceIP);
+        } 
+    }
+    
+    protected void sendEchoReply(NodeConnector p, byte[] sMAC, InetAddress sIP,
+            byte[] tMAC, InetAddress tIP) {
+        ICMP reply = new ICMP(true);
+        reply.setType((byte)0);
+        reply.setCode((byte)0);
+        IPv4 replyPkt = new IPv4(true);
+        /*
+         * The following are set in IPv4 packet:
+         *       setVersion((byte) 4);
+        setHeaderLength((byte) 5);
+        setDiffServ((byte) 0);
+        setECN((byte) 0);
+        setIdentification(generateId());
+        setFlags((byte) 2);
+        setFragmentOffset((short) 0);
+         */
+        replyPkt.setSourceAddress(sIP).setDestinationAddress(tIP).setPayload(reply);
+        replyPkt.setProtocol(IPProtocols.ICMP.byteValue());
+
+        Ethernet ethernet = new Ethernet();
+        ethernet.setSourceMACAddress(sMAC).setDestinationMACAddress(tMAC)
+                .setEtherType(EtherTypes.IPv4.shortValue()).setPayload(replyPkt);
+
+        RawPacket destPkt = this.dataPacketService.encodeDataPacket(ethernet);
+        destPkt.setOutgoingNodeConnector(p);
+
+        this.dataPacketService.transmitDataPacket(destPkt);
+    }
+    
+    public byte[] getControllerMAC() {
+        if (switchManager == null) {
+            return null;
+        }
+        return switchManager.getControllerMAC();
+    }
 
 	
 	
