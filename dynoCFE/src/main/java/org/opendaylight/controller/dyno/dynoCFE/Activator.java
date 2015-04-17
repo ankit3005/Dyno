@@ -7,7 +7,7 @@ import java.util.Hashtable;
 
 import org.apache.felix.dm.Component;
 import org.opendaylight.controller.sal.core.ComponentActivatorAbstractBase;
-import org.opendaylight.controller.portStateExaminer.IPortStateExaminerService;
+import org.opendaylight.controller.dyno.IDynoService;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,15 +86,15 @@ public class Activator extends ComponentActivatorAbstractBase {
     	logger.info("Exporting the PSE-CFE services");
 
     	Dictionary<String, String> props = new Hashtable<String, String>();
-    	props.put("salListenerName", "PSECFE");
+    	props.put("salListenerName", "DynoCFE");
     	c.setInterface(new String[] { DynoCFEApi.class.getName()}, props);
 
         logger.info("Registering dependent services");
 
     	if (imp.equals(CFEImpl.class)) {
     		c.add(createContainerServiceDependency(containerName).setService(
-    				IPortStateExaminerService.class).setCallbacks("setPSEService",
-                    "unsetPSEService").setRequired(true));
+    				IDynoService.class).setCallbacks("setDynoService",
+                    "unsetDynoService").setRequired(true));
     	}
 
     }

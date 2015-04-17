@@ -8,3 +8,5 @@ web.xml
 */target/*
 */target-ide/*
 *.jar
+dynoCFE/.gitignore
+dynoCFENorthbound/.gitignore

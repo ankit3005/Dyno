@@ -27,13 +27,13 @@ public class CFEImpl implements DynoCFEApi{
 	/* Setter and UnSetter of External Services */
 
 	void setDynoService(IDynoService s) {
-		logger.info("PseServices is set!");
+		logger.info("DynoServices is set!");
 		dynoService = s;
 	}
 
 	void unsetDynoService(IDynoService s) {
 		if (dynoService == s) {
-            logger.info("PseServices is removed!");
+            logger.info("DynoServices is removed!");
             dynoService = null;
         }
 	}
@@ -74,6 +74,11 @@ public class CFEImpl implements DynoCFEApi{
 	}
 
 	
+    @Override
+	public boolean provisionFlow(HashMap<String, String> flowAttributes) {
+        //TODO stub method
+        return false;
+    }
 
 	
 	
