@@ -4,7 +4,7 @@ Dyno
 ###Build steps
 ```
 git clone https://github.com/ankit3005/Dyno.git
-cd Dyno/Dyno
+cd Dyno/dyno
 mvn clean package -Dcheckstyle.skip=true
 ```
 
